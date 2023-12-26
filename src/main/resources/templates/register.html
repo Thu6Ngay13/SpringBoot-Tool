@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Tool</title>
+	<link rel="stylesheet" th:href="@{https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css}">
+</head>
+
+<body>
+	<div class="container mt-5">
+		<h2 class="text-center">Tool</h2>
+
+		<div>
+			<div class="form-group">
+				<label for="authToken" class="font-weight-bold">Auth Token:</label>
+				<textarea class="form-control" id="authToken" name="authToken" placeholder="Enter Auth Token"></textarea>
+			</div>
+
+			<div class="form-group">
+				<label for="jsonData" class="font-weight-bold">JSON Data:</label>
+				<textarea class="form-control" id="jsonData" rows="3" name="jsonData" placeholder="Enter JSON Data"></textarea>
+			</div>
+
+			<div class="d-flex justify-content-between">
+				<button class="btn btn-primary btn-api-call" id="T1">Start</button>
+				<button class="btn btn-primary btn-api-call" id="T2">Start</button>
+				<button class="btn btn-primary btn-api-call" id="T3">Start</button>
+				<button class="btn btn-primary btn-api-call" id="T4">Start</button>
+				<button class="btn btn-primary btn-api-call" id="T5">Start</button>
+			</div>
+		</div>
+
+		<div id="result-container"></div>
+
+	</div>
+
+	<script th:src="@{https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js}"></script>
+	<script>
+		var countR = 0;
+		var maxResultCount = 30;
+		
+		var timeB = 300;
+		var timeE = 500;
+		var timeFO = 300;
+		
+		var runNow = 0;
+		var intervalIds = {};
+
+		var jsonData = "{key : value}";
+		var authToken = "Bearer YOUR_ACCESS_TOKEN";
+
+		function prependResult(content) {
+			$('#result-container').prepend(content);
+			var resultCount = $('#result-container').children('p').length;
+
+			if (resultCount > maxResultCount) {
+				$('#result-container p:last-child').fadeOut(timeFO, function () {
+					$(this).remove();
+				});
+			}
+		}
+
+		function ApiCall(idButton) {
+			runNow++;
+			$('input, textarea').prop('readonly', true);
+			
+			intervalIds[idButton] = setInterval(function () {
+				countR++;
+				$.ajax({
+					type: 'POST',
+					url: '/api-tool/register',
+					contentType: 'application/json',
+					data: jsonData,
+					headers: {
+						'Authorization': encodeURIComponent(authToken)
+					},
+					success: function (data) {
+						prependResult(
+							'<p class="mt-3 text-info">' +
+							idButton + ' | ' +  
+							countR + ' | ' + 
+							data['time'] + ' | ' + 
+							data['body'] + '</p>'
+						);
+					},
+					error: function (jqXHR, textStatus, errorThrown) {
+						var jsonResponse = JSON.stringify(jqXHR.responseJSON);
+						prependResult(
+							'<p class="mt-3 text-danger">' +
+							idButton + ' | ' + 
+							countR + ' | ' + 
+							jsonResponse + '</p>'
+						);
+					}
+				});
+			}, getRandomTime(timeB, timeE));
+		}
+
+		function getRandomTime(min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+
+		function startApiCallClick() {
+			var idButton = '#' + $(this).attr('id');
+			authToken = $('#authToken').val();
+			jsonData = $('#jsonData').val();
+			
+			if (authToken && jsonData) {
+				ApiCall(idButton);
+				$(idButton)
+					.text('Stop')
+					.removeClass('btn-primary')
+					.addClass('btn-danger')
+					.off('click')
+					.on('click', stopApiCallClick);
+			} else {
+				alert('Please enter both Auth Token and JSON Data.');
+			}
+		}
+
+		function stopApiCallClick() {
+			var idButton = '#' + $(this).attr('id');			
+			clearInterval(intervalIds[idButton]);
+			
+			$(idButton)
+				.text('Start')
+				.removeClass('btn-danger')
+				.addClass('btn-primary')
+				.off('click')
+				.on('click', startApiCallClick);
+				
+			runNow--;
+			if(runNow === 0){
+				$('input, textarea').prop('readonly', false);
+			}
+		}
+		
+		$('.btn-api-call').on('click', startApiCallClick);
+		
+	</script>
+</body>
+</html>
